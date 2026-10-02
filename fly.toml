@@ -1,0 +1,35 @@
+# Fly.io app config. App names are globally unique across all of Fly - if
+# "dhingani-investment" is taken, change it here (and it becomes part of
+# your URL: https://<app>.fly.dev).
+app = "dhingani-investment"
+primary_region = "jnb"  # Johannesburg - closest Fly region to Zimbabwe
+
+[build]
+
+[env]
+# Non-secret config. Secrets (SECRET_KEY, Twilio, Paynow) are set separately
+# via `fly secrets set` - never put real credentials in this file.
+DATABASE_URL = "sqlite:////data/stockpilot.db"
+PAGE_SIZE = "20"
+
+[[mounts]]
+source = "stockpilot_data"
+destination = "/data"
+
+[http_service]
+internal_port = 8000
+force_https = true
+auto_stop_machines = false
+auto_start_machines = true
+# Keep at least one machine running always - the background digest
+# scheduler can only fire on a machine that's actually up, and a
+# scale-to-zero machine won't wake itself up on a schedule.
+min_machines_running = 1
+
+[[http_service.checks]]
+grace_period = "10s"
+interval = "30s"
+method = "GET"
+path = "/login"
+protocol = "http"
+timeout = "5s"

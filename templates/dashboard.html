@@ -1,0 +1,64 @@
+{% extends 'base.html' %}
+{% block content %}
+<div class="page-head"><h1>Dashboard</h1></div>
+
+<div class="cards">
+  <div class="card {{ 'good' if pl.profit > 0 else ('bad' if pl.profit < 0 else '') }}">
+    <div class="card-label">Profit / Loss ({{ pl.window_days }}d)</div>
+    <div class="card-value">{{ pl.status }}</div>
+    <div class="card-sub">Net: {{ pl.profit|usd }}</div>
+  </div>
+  <div class="card">
+    <div class="card-label">Revenue ({{ pl.window_days }}d)</div>
+    <div class="card-value">{{ pl.revenue|usd }}</div>
+    <div class="card-sub">Cost: {{ pl.cost|usd }}</div>
+  </div>
+  <div class="card {{ 'bad' if low else 'good' }}">
+    <div class="card-label">Low stock (≤ {{ threshold }})</div>
+    <div class="card-value">{{ low|length }}</div>
+    <div class="card-sub">product/location lines need reorder</div>
+  </div>
+</div>
+
+<div class="grid2">
+  <section class="panel">
+    <h2>⚠️ Low stock — reorder now</h2>
+    {% if low %}
+    <div class="table-wrap">
+    <table>
+      <tr><th>Product</th><th>SKU</th><th>Location</th><th>Qty</th></tr>
+      {% for s in low %}
+      <tr><td>{{ s.product.name }}</td><td>{{ s.product.sku }}</td>
+          <td>{{ s.location.name }}</td>
+          <td class="warn">{{ s.quantity }}</td></tr>
+      {% endfor %}
+    </table>
+    </div>
+    {% else %}<p class="empty-state">All stock levels healthy.</p>{% endif %}
+  </section>
+
+  <section class="panel">
+    <h2>🔥 Products on demand</h2>
+    {% if demand %}
+    <div class="table-wrap">
+    <table>
+      <tr><th>Product</th><th>Units</th><th>Profit</th><th></th></tr>
+      {% for d in demand[:8] %}
+      <tr><td>{{ d.product }}</td><td>{{ d.units }}</td>
+          <td class="{{ 'good-t' if d.profit>=0 else 'bad-t' }}">{{ d.profit|usd }}</td>
+          <td>{% if d.on_demand %}<span class="pill">HOT</span>{% endif %}</td></tr>
+      {% endfor %}
+    </table>
+    </div>
+    {% else %}<p class="empty-state">No sales in the window yet.</p>{% endif %}
+  </section>
+</div>
+
+{% if current_user.is_admin %}
+<div class="actions">
+  <button onclick="sendDigest()">Send admin digest now</button>
+  <button onclick="checkStock()" class="ghost">Re-check low stock</button>
+  <span id="action-status" class="muted"></span>
+</div>
+{% endif %}
+{% endblock %}

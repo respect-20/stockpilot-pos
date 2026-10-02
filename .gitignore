@@ -1,0 +1,15 @@
+# Secrets - never commit real credentials
+.env
+
+# Local dev database - each environment gets its own
+stockpilot.db
+*.db
+
+# Python
+__pycache__/
+*.pyc
+venv/
+.pytest_cache/
+
+# OS
+.DS_Store

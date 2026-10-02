@@ -1,0 +1,43 @@
+{% extends 'base.html' %}
+{% block content %}
+<div class="page-head"><h1>Users</h1></div>
+
+<section class="panel">
+  <h2>Add user</h2>
+  <form method="post" class="form-grid cols-3">
+    <div class="field"><label>Username</label><input name="username" required></div>
+    <div class="field"><label>Password</label><input name="password" type="password" required></div>
+    <div class="field">
+      <label>Role</label>
+      <select name="role">
+        <option value="cashier">Cashier</option>
+        <option value="admin">Admin</option>
+      </select>
+    </div>
+    <div class="field" style="align-self:end"><button type="submit">Create user</button></div>
+  </form>
+</section>
+
+<section class="panel">
+  <div class="table-wrap">
+  <table>
+    <tr><th>Username</th><th>Role</th><th>Status</th><th>Created</th><th></th></tr>
+    {% for u in users %}
+    <tr>
+      <td>{{ u.username }}</td>
+      <td><span class="badge role-{{ u.role }}">{{ u.role }}</span></td>
+      <td>{{ 'Active' if u.active else 'Inactive' }}</td>
+      <td>{{ u.created_at.strftime('%Y-%m-%d') }}</td>
+      <td>
+        {% if u.id != current_user.id %}
+        <form method="post" action="{{ url_for('toggle_user', uid=u.id) }}">
+          <button class="ghost sm">{{ 'Deactivate' if u.active else 'Activate' }}</button>
+        </form>
+        {% else %}<span class="faint">You</span>{% endif %}
+      </td>
+    </tr>
+    {% endfor %}
+  </table>
+  </div>
+</section>
+{% endblock %}

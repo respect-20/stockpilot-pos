@@ -1,0 +1,111 @@
+{% extends 'base.html' %}
+{% block content %}
+<div class="page-head"><h1>Products &amp; Inventory</h1></div>
+
+<section class="panel">
+  <h2>Add / edit product</h2>
+  <form method="post" action="{{ url_for('save_product') }}" class="form-grid">
+    <input type="hidden" name="id" id="f-id">
+    <div class="field"><label>SKU</label><input name="sku" id="f-sku" required></div>
+    <div class="field"><label>Barcode</label><input name="barcode" id="f-barcode" placeholder="Optional"></div>
+    <div class="field"><label>Name</label><input name="name" id="f-name" required></div>
+    <div class="field"><label>Category</label><input name="category" id="f-category"></div>
+    <div class="field"><label>Cost price (USD)</label><input name="cost_price" id="f-cost" type="number" step="0.01" placeholder="$0.00"></div>
+    <div class="field"><label>Sell price (USD)</label><input name="sell_price" id="f-sell" type="number" step="0.01" placeholder="$0.00"></div>
+    <div class="field">
+      <label>Initial qty <span class="faint">(new products only, at {{ active_location.name if active_location else 'current location' }})</span></label>
+      <input name="quantity" id="f-qty" type="number" placeholder="0">
+    </div>
+    <div class="field" style="align-self:end">
+      <div class="actions" style="margin-top:0">
+        <button type="submit">Save</button>
+        <button type="button" onclick="resetForm()" class="ghost">Clear</button>
+      </div>
+    </div>
+  </form>
+</section>
+
+<section class="panel">
+  <h2>Receive stock by barcode</h2>
+  <p class="muted" style="margin-top:-8px">
+    Scan (or type) each item as it arrives, at {{ active_location.name if active_location else 'the current location' }}.
+    A known barcode lets you add quantity straight away; an unknown one pre-fills the form above so you can create it.
+  </p>
+  <div class="barcode-bar">
+    <input id="receive-barcode-input" type="text" placeholder="Scan or type barcode, then Enter">
+    <button type="button" onclick="scanReceiveBarcode()" class="ghost">Look up</button>
+  </div>
+  <div id="receive-panel" class="actions" hidden>
+    <span><strong id="receive-product-name"></strong> — current stock: <span id="receive-current-qty"></span></span>
+    <input id="receive-qty" type="number" min="1" value="1" style="width:80px">
+    <button type="button" onclick="confirmReceive()">Receive</button>
+    <button type="button" onclick="cancelReceive()" class="ghost">Cancel</button>
+  </div>
+  <p id="receive-status" class="muted"></p>
+</section>
+
+<form method="get" class="inline-form">
+  <div class="field">
+    <label>Search</label>
+    <input type="text" name="q" value="{{ q }}" placeholder="Name, SKU or barcode">
+  </div>
+  <button type="submit" class="ghost">Search</button>
+  {% if q %}<a href="{{ url_for('products') }}" class="btn ghost">Clear</a>{% endif %}
+</form>
+
+<section class="panel">
+  <div class="table-wrap">
+  <table>
+    <tr><th>SKU</th><th>Barcode</th><th>Name</th><th>Category</th><th>Cost (USD)</th><th>Sell (USD)</th>
+        <th>Margin (USD)</th><th>Qty</th><th>By location</th><th></th></tr>
+    {% for p in products %}
+    <tr class="{{ 'low-row' if p.quantity <= threshold }}">
+      <td>{{ p.sku }}</td>
+      <td class="faint">{{ p.barcode or '–' }}</td>
+      <td>{{ p.name }}</td><td>{{ p.category }}</td>
+      <td>{{ p.cost_price|usd }}</td><td>{{ p.sell_price|usd }}</td>
+      <td class="{{ 'good-t' if p.margin>=0 else 'bad-t' }}">{{ p.margin|usd }}</td>
+      <td>{{ p.quantity }}{% if p.quantity <= threshold %} ⚠️{% endif %}</td>
+      <td class="stock-breakdown">
+        {% for s in p.stocks %}<span>{{ s.location.name }}: {{ s.quantity }}</span>{% endfor %}
+      </td>
+      <td class="row-actions">
+        <button type="button" class="ghost sm edit-btn"
+                data-id="{{ p.id }}" data-sku="{{ p.sku }}" data-barcode="{{ p.barcode or '' }}"
+                data-name="{{ p.name }}" data-category="{{ p.category }}"
+                data-cost="{{ p.cost_price }}" data-sell="{{ p.sell_price }}">Edit</button>
+        <form method="post" action="{{ url_for('adjust_stock_route', pid=p.id) }}" style="display:flex;gap:4px">
+          <input type="number" name="delta" placeholder="±qty" style="width:70px" required>
+          <select name="reason" style="width:100px">
+            <option value="received">Received</option>
+            <option value="correction">Correction</option>
+            <option value="damage">Damage</option>
+            <option value="other">Other</option>
+          </select>
+          <button class="ghost sm" title="Adjust stock at {{ active_location.name if active_location else 'current location' }}">Apply</button>
+        </form>
+        <form method="post" action="{{ url_for('delete_product', pid=p.id) }}"
+              onsubmit="return confirm('Delete {{ p.name }}?')">
+          <button class="danger sm">Del</button>
+        </form>
+      </td>
+    </tr>
+    {% else %}
+    <tr><td colspan="10" class="empty-state">No products match your search.</td></tr>
+    {% endfor %}
+  </table>
+  </div>
+
+  {% if pager.pages > 1 %}
+  <div class="pagination">
+    {% if pager.has_prev %}<a href="{{ url_for('products', page=pager.prev_num, q=q) }}">← Prev</a>{% else %}<span class="disabled">← Prev</span>{% endif %}
+    {% for num in pager.iter_pages() %}
+      {% if num %}
+        <a href="{{ url_for('products', page=num, q=q) }}" class="{{ 'current' if num==pager.page }}">{{ num }}</a>
+      {% else %}<span>…</span>{% endif %}
+    {% endfor %}
+    {% if pager.has_next %}<a href="{{ url_for('products', page=pager.next_num, q=q) }}">Next →</a>{% else %}<span class="disabled">Next →</span>{% endif %}
+  </div>
+  {% endif %}
+</section>
+{% endblock %}

@@ -1,0 +1,84 @@
+{% extends 'base.html' %}
+{% block content %}
+<div class="page-head">
+  <h1>Reports</h1>
+  <a href="{{ url_for('export_csv') }}" class="btn ghost">Export sales CSV</a>
+</div>
+
+<form method="get" class="inline-form">
+  <div class="field">
+    <label>Window (days)</label>
+    <input type="number" name="days" value="{{ days }}" min="1" max="365">
+  </div>
+  <button type="submit" class="ghost">Apply</button>
+</form>
+
+<div class="cards">
+  <div class="card {{ 'good' if pl.profit>0 else ('bad' if pl.profit<0 else '') }}">
+    <div class="card-label">Status</div>
+    <div class="card-value">{{ pl.status }}</div>
+    <div class="card-sub">Net {{ pl.profit|usd }}</div>
+  </div>
+  <div class="card"><div class="card-label">Revenue</div>
+    <div class="card-value">{{ pl.revenue|usd }}</div></div>
+  <div class="card"><div class="card-label">Cost</div>
+    <div class="card-value">{{ pl.cost|usd }}</div></div>
+</div>
+
+<section class="panel">
+  <h2>Demand ranking (last {{ days }}d)</h2>
+  <div class="table-wrap">
+  <table>
+    <tr><th>Product</th><th>Units sold</th><th>Profit</th><th>On demand?</th></tr>
+    {% for d in demand %}
+    <tr><td>{{ d.product }}</td><td>{{ d.units }}</td>
+        <td class="{{ 'good-t' if d.profit>=0 else 'bad-t' }}">{{ d.profit|usd }}</td>
+        <td>{% if d.on_demand %}<span class="pill">HOT</span>{% else %}–{% endif %}</td></tr>
+    {% else %}
+    <tr><td colspan="4" class="empty-state">No sales in this window.</td></tr>
+    {% endfor %}
+  </table>
+  </div>
+</section>
+
+<section class="panel">
+  <h2>Cashier performance (last {{ days }}d)</h2>
+  <div class="table-wrap">
+  <table>
+    <tr><th>Cashier</th><th>Customers served</th><th>Revenue</th><th>Avg. sale</th><th>Profit</th><th></th></tr>
+    {% for c in cashiers %}
+    <tr><td>{{ c.username }}</td><td>{{ c.sales_count }}</td>
+        <td>{{ c.revenue|usd }}</td><td>{{ c.avg_sale|usd }}</td>
+        <td class="{{ 'good-t' if c.profit>=0 else 'bad-t' }}">{{ c.profit|usd }}</td>
+        <td>{% if loop.first %}<span class="pill">TOP</span>{% endif %}</td></tr>
+    {% else %}
+    <tr><td colspan="6" class="empty-state">No completed sales in this window.</td></tr>
+    {% endfor %}
+  </table>
+  </div>
+</section>
+
+<section class="panel">
+  <h2>Notification log</h2>
+  <div class="table-wrap">
+  <table>
+    <tr><th>When</th><th>Kind</th><th>Channel</th><th>To</th><th>Status</th><th>Message</th></tr>
+    {% for n in notifications %}
+    <tr><td>{{ n.created_at.strftime('%m-%d %H:%M') }}</td><td>{{ n.kind }}</td>
+        <td>{{ n.channel }}</td><td>{{ n.recipient }}</td>
+        <td>{{ n.status }}</td><td class="msg">{{ n.message }}</td></tr>
+    {% else %}
+    <tr><td colspan="6" class="empty-state">No notifications yet.</td></tr>
+    {% endfor %}
+  </table>
+  </div>
+
+  {% if notif_pager.pages > 1 %}
+  <div class="pagination">
+    {% if notif_pager.has_prev %}<a href="{{ url_for('reports', page=notif_pager.prev_num, days=days) }}">← Prev</a>{% else %}<span class="disabled">← Prev</span>{% endif %}
+    <span class="current">{{ notif_pager.page }} / {{ notif_pager.pages }}</span>
+    {% if notif_pager.has_next %}<a href="{{ url_for('reports', page=notif_pager.next_num, days=days) }}">Next →</a>{% else %}<span class="disabled">Next →</span>{% endif %}
+  </div>
+  {% endif %}
+</section>
+{% endblock %}

@@ -1,0 +1,59 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>{% block title %}Dhingani Investment{% endblock %}</title>
+  <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+</head>
+<body>
+  <header class="topbar">
+    <div class="topbar-left">
+      <div class="brand">🛒 Dhingani <span class="accent">Investment</span></div>
+      {% if current_user.is_authenticated %}
+      <nav class="main-nav">
+        <a href="{{ url_for('dashboard') }}" class="{{ 'active' if request.endpoint=='dashboard' }}">Dashboard</a>
+        {% if current_user.is_admin %}
+        <a href="{{ url_for('products') }}" class="{{ 'active' if request.endpoint=='products' }}">Products</a>
+        {% endif %}
+        <a href="{{ url_for('sales') }}" class="{{ 'active' if request.endpoint=='sales' }}">Sell</a>
+        {% if current_user.is_admin %}
+        <a href="{{ url_for('reports') }}" class="{{ 'active' if request.endpoint=='reports' }}">Reports</a>
+        <a href="{{ url_for('locations') }}" class="{{ 'active' if request.endpoint=='locations' }}">Locations</a>
+        <a href="{{ url_for('users') }}" class="{{ 'active' if request.endpoint=='users' }}">Users</a>
+        {% endif %}
+      </nav>
+      {% endif %}
+    </div>
+    {% if current_user.is_authenticated %}
+    <div class="topbar-right">
+      {% if locations|length > 1 %}
+      <form method="post" action="{{ url_for('set_location') }}" class="location-form">
+        <select name="location_id" onchange="this.form.submit()">
+          {% for loc in locations %}
+          <option value="{{ loc.id }}" {{ 'selected' if active_location and loc.id==active_location.id }}>{{ loc.name }}</option>
+          {% endfor %}
+        </select>
+      </form>
+      {% elif active_location %}
+      <span class="user-chip">📍 {{ active_location.name }}</span>
+      {% endif %}
+      <span class="user-chip">
+        {{ current_user.username }}
+        <span class="role-badge">{{ current_user.role }}</span>
+      </span>
+      <a href="{{ url_for('logout') }}" class="logout-link">Log out</a>
+    </div>
+    {% endif %}
+  </header>
+  <main>
+    {% with messages = get_flashed_messages() %}
+      {% if messages %}
+        <div class="flash">{% for m in messages %}<div>{{ m }}</div>{% endfor %}</div>
+      {% endif %}
+    {% endwith %}
+    {% block content %}{% endblock %}
+  </main>
+  <script src="{{ url_for('static', filename='app.js') }}"></script>
+</body>
+</html>
