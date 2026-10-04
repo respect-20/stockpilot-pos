@@ -30,6 +30,11 @@ def _record(kind, channel, recipient, message, status):
     db.session.commit()
 
 
+def _recipients(value):
+    """ADMIN_WHATSAPP / ADMIN_SMS may be one number or several, comma-separated."""
+    return [v.strip() for v in (value or "").split(",") if v.strip()]
+
+
 def _send_sms(client, to, body):
     client.messages.create(body=body, from_=Config.TWILIO_SMS_FROM, to=to)
 
@@ -42,35 +47,36 @@ def _send_whatsapp(client, to, body):
 
 
 def notify_admin(kind, message):
-    """Send `message` to the admin over WhatsApp and SMS.
+    """Send `message` to every admin number over WhatsApp and SMS.
 
-    Returns a list of per-channel result dicts. Always records to the DB.
+    ADMIN_WHATSAPP / ADMIN_SMS may each list more than one number
+    (comma-separated) - every one of them gets its own send attempt.
+    Returns a list of per-recipient result dicts. Always records to the DB.
     """
     client = _twilio_client()
     results = []
 
     targets = [
-        ("whatsapp", Config.ADMIN_WHATSAPP, Config.TWILIO_WHATSAPP_FROM, _send_whatsapp),
-        ("sms", Config.ADMIN_SMS, Config.TWILIO_SMS_FROM, _send_sms),
+        ("whatsapp", _recipients(Config.ADMIN_WHATSAPP), Config.TWILIO_WHATSAPP_FROM, _send_whatsapp),
+        ("sms", _recipients(Config.ADMIN_SMS), Config.TWILIO_SMS_FROM, _send_sms),
     ]
 
-    for channel, to, sender, fn in targets:
-        if not to:
-            continue
-        if client and sender:
-            try:
-                fn(client, to, message)
-                _record(kind, channel, to, message, "sent")
-                results.append({"channel": channel, "to": to, "status": "sent"})
-                continue
-            except Exception as exc:
-                print(f"[notify] {channel} send failed: {exc}")
-                _record(kind, channel, to, message, "failed")
-                results.append({"channel": channel, "to": to, "status": "failed"})
-                continue
-        # No live sending available -> log only
-        _record(kind, channel, to, message, "logged")
-        results.append({"channel": channel, "to": to, "status": "logged"})
+    for channel, recipients, sender, fn in targets:
+        for to in recipients:
+            if client and sender:
+                try:
+                    fn(client, to, message)
+                    _record(kind, channel, to, message, "sent")
+                    results.append({"channel": channel, "to": to, "status": "sent"})
+                    continue
+                except Exception as exc:
+                    print(f"[notify] {channel} send to {to} failed: {exc}")
+                    _record(kind, channel, to, message, "failed")
+                    results.append({"channel": channel, "to": to, "status": "failed"})
+                    continue
+            # No live sending available -> log only
+            _record(kind, channel, to, message, "logged")
+            results.append({"channel": channel, "to": to, "status": "logged"})
 
     # If no admin contact configured at all, still keep a log entry.
     if not results:

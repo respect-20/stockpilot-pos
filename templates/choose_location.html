@@ -1,0 +1,22 @@
+{% extends 'base.html' %}
+{% block content %}
+<div class="auth-shell">
+  <div class="auth-card">
+    <h1>Which store are you at?</h1>
+    <p class="auth-sub">You'll stay on this store until you log out.</p>
+    {% with messages = get_flashed_messages() %}
+      {% if messages %}
+        <div class="flash">{% for m in messages %}<div>{{ m }}</div>{% endfor %}</div>
+      {% endif %}
+    {% endwith %}
+    <form method="post">
+      <div class="field">
+        {% for loc in locations %}
+        <button type="submit" name="location_id" value="{{ loc.id }}" class="ghost block"
+                style="margin-bottom:8px">{{ loc.name }}</button>
+        {% endfor %}
+      </div>
+    </form>
+  </div>
+</div>
+{% endblock %}

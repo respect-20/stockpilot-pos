@@ -43,8 +43,9 @@ class Config:
     APP_BASE_URL = os.getenv("APP_BASE_URL", "http://127.0.0.1:5000")
 
     # ---- Admin contact (who receives alerts) ----
-    ADMIN_WHATSAPP = os.getenv("ADMIN_WHATSAPP", "")   # e.g. +2348012345678
-    ADMIN_SMS = os.getenv("ADMIN_SMS", "")             # e.g. +2348012345678
+    # One number, or several comma-separated - every one gets every alert.
+    ADMIN_WHATSAPP = os.getenv("ADMIN_WHATSAPP", "")   # e.g. +2348012345678,+2348087654321
+    ADMIN_SMS = os.getenv("ADMIN_SMS", "")             # e.g. +2348012345678,+2348087654321
 
     # ---- Twilio credentials (optional) ----
     TWILIO_ACCOUNT_SID = os.getenv("TWILIO_ACCOUNT_SID", "")

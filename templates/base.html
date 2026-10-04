@@ -27,7 +27,7 @@
     </div>
     {% if current_user.is_authenticated %}
     <div class="topbar-right">
-      {% if locations|length > 1 %}
+      {% if current_user.is_admin and locations|length > 1 %}
       <form method="post" action="{{ url_for('set_location') }}" class="location-form">
         <select name="location_id" onchange="this.form.submit()">
           {% for loc in locations %}

@@ -51,8 +51,8 @@ SMS and WhatsApp). Fill these in your `.env`:
 
 | Variable | Meaning |
 |---|---|
-| `ADMIN_WHATSAPP` | Admin WhatsApp number, e.g. `+2348012345678` |
-| `ADMIN_SMS` | Admin phone number for SMS |
+| `ADMIN_WHATSAPP` | Admin WhatsApp number(s) - one, or several comma-separated, e.g. `+2348012345678,+2348087654321` |
+| `ADMIN_SMS` | Admin phone number(s) for SMS - same comma-separated format |
 | `TWILIO_ACCOUNT_SID` / `TWILIO_AUTH_TOKEN` | Your Twilio credentials |
 | `TWILIO_SMS_FROM` | A Twilio SMS-capable number |
 | `TWILIO_WHATSAPP_FROM` | Your Twilio WhatsApp sender, e.g. `whatsapp:+14155238886` |

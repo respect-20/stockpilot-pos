@@ -61,10 +61,17 @@ def create_app(config_overrides=None):
 
 
 def current_location():
-    """The location the current user is operating from (session-selected)."""
+    """The location the current user is operating from (session-selected).
+
+    Admins get a sensible default (first location) if they haven't picked
+    one yet, since they're free to switch anytime. Cashiers never get an
+    implicit default here - the require_location_for_cashiers before_request
+    hook forces them through /choose-location first, so by the time any
+    route body runs, a cashier's session already has one set.
+    """
     loc_id = session.get("location_id")
-    loc = Location.query.get(loc_id) if loc_id else None
-    if not loc:
+    loc = db.session.get(Location, loc_id) if loc_id else None
+    if not loc and current_user.is_authenticated and current_user.is_admin:
         loc = Location.query.order_by(Location.id).first()
         if loc:
             session["location_id"] = loc.id
@@ -79,6 +86,25 @@ def register_routes(app):
             "locations": Location.query.order_by(Location.name).all(),
             "active_location": current_location(),
         }
+
+    @app.before_request
+    def require_location_for_cashiers():
+        """Cashiers must pick a store before doing anything else, and stay
+        locked to it until they log out. Admins are exempt - they keep the
+        free-switching dropdown they already have."""
+        if not current_user.is_authenticated or current_user.is_admin:
+            return
+        if request.endpoint in ("choose_location", "logout", "static"):
+            return
+        if "location_id" in session:
+            return
+        locations = Location.query.order_by(Location.id).all()
+        if len(locations) <= 1:
+            # Nothing to choose between - assign the only store and move on.
+            if locations:
+                session["location_id"] = locations[0].id
+            return
+        return redirect(url_for("choose_location"))
 
     # ---------- Auth ----------
     @app.route("/login", methods=["GET", "POST"])
@@ -99,14 +125,30 @@ def register_routes(app):
     @app.route("/logout")
     @login_required
     def logout():
+        # Cashiers re-pick their store on next login; clearing it here is
+        # what makes "log out to switch stores" actually true.
+        session.pop("location_id", None)
         logout_user()
         return redirect(url_for("login"))
 
+    @app.route("/choose-location", methods=["GET", "POST"])
+    @login_required
+    def choose_location():
+        locations = Location.query.order_by(Location.name).all()
+        if request.method == "POST":
+            loc = db.session.get(Location, request.form.get("location_id", type=int))
+            if loc:
+                session["location_id"] = loc.id
+                return redirect(url_for("dashboard"))
+            flash("Pick a store to continue.")
+        return render_template("choose_location.html", locations=locations)
+
     @app.route("/set-location", methods=["POST"])
     @login_required
+    @admin_required
     def set_location():
         loc_id = request.form.get("location_id", type=int)
-        if Location.query.get(loc_id):
+        if db.session.get(Location, loc_id):
             session["location_id"] = loc_id
         return redirect(request.referrer or url_for("dashboard"))
 
